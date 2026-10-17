@@ -17,15 +17,12 @@ pregunta ─► retriever (ChromaDB, top_k=4) ─► prompt grounded ─► Gemi
 
 ## Requisitos
 
-- Python 3.10 o superior
+- Python 3.12 o superior
 - Una API key gratuita de Google AI Studio (`GOOGLE_API_KEY`): https://aistudio.google.com/apikey
 
-## Instalación
+## Instalación (en un ambiente que tenga Python 3.12 o superior)
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS / Linux
 pip install -r requirements.txt
 ```
 
@@ -70,9 +67,9 @@ python rag.py
 ```
 
 ```
-💬 Preguntá sobre las políticas de TechCorp ('salir' para terminar)
+💬 Pregunta sobre las políticas de TechCorp ('salir' para terminar)
 
-🧑 Vos: ¿Cuántos días de vacaciones tengo con 5 años de antigüedad?
+🧑 Tu: ¿Cuántos días de vacaciones tengo con 5 años de antigüedad?
 
 🤖 A un empleado con 5 años de antigüedad le corresponden 21 días corridos de vacaciones.
 📎 Fuentes: politica_vacaciones.md

@@ -1,0 +1,32 @@
+[
+  {
+    "pregunta": "¿Cómo ejecuto una función después de enviar la respuesta al cliente, por ejemplo para mandar un email?",
+    "documento_id_esperado": "background_tasks.md",
+    "tipo": "semantica"
+  },
+  {
+    "pregunta": "¿Qué hace OAuth2PasswordBearer cuando falta el header Authorization?",
+    "documento_id_esperado": "security_oauth2.md",
+    "tipo": "termino_exacto"
+  },
+  {
+    "pregunta": "¿Cómo reemplazo la base de datos por una de prueba en los tests usando dependency_overrides?",
+    "documento_id_esperado": ["testing.md", "dependency_injection.md"],
+    "tipo": "multi_documento"
+  },
+  {
+    "pregunta": "¿Cuántos workers de Uvicorn conviene usar y cómo se despliega en Docker?",
+    "documento_id_esperado": "deployment_guide.pdf",
+    "tipo": "semantica"
+  },
+  {
+    "pregunta": "Mi API responde HTTP 422 Unprocessable Entity, ¿qué significa?",
+    "documento_id_esperado": "error_reference.json",
+    "tipo": "termino_exacto"
+  },
+  {
+    "pregunta": "¿En qué orden debo declarar una ruta fija y una ruta con parámetro de path?",
+    "documento_id_esperado": "routing.md",
+    "tipo": "semantica"
+  }
+]

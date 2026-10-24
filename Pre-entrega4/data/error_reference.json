@@ -1,0 +1,54 @@
+{
+  "title": "Referencia de errores comunes en FastAPI",
+  "category": "troubleshooting",
+  "entries": [
+    {
+      "id": "http-422",
+      "title": "HTTP 422 Unprocessable Entity (RequestValidationError)",
+      "tags": ["422", "validacion", "pydantic"],
+      "content": "El código HTTP 422 Unprocessable Entity indica que la petición llegó bien formada pero no pasó la validación de Pydantic: falta un campo obligatorio, un valor tiene el tipo incorrecto o no cumple una restricción como min_length o ge. FastAPI lanza internamente RequestValidationError y responde con un JSON cuya clave detail es una lista de errores; cada error incluye loc (la ubicación, por ejemplo ['body', 'precio']), msg (el mensaje) y type. Para personalizar la respuesta se registra un manejador con @app.exception_handler(RequestValidationError) y se devuelve un JSONResponse con el formato deseado. Revisar la clave loc suele ser la forma más rápida de encontrar el campo problemático."
+    },
+    {
+      "id": "http-401-vs-403",
+      "title": "Diferencia entre HTTP 401 y HTTP 403",
+      "tags": ["401", "403", "autenticacion", "autorizacion"],
+      "content": "HTTP 401 Unauthorized significa que el cliente no está autenticado: no envió credenciales o el token es inválido o expiró. Debe acompañarse del header WWW-Authenticate. HTTP 403 Forbidden significa que el cliente sí está autenticado pero no tiene permiso para el recurso, por ejemplo porque le falta un scope. OAuth2PasswordBearer devuelve 401 automáticamente cuando falta el header Authorization. Confundir ambos códigos es un error frecuente que dificulta la depuración del lado del cliente."
+    },
+    {
+      "id": "python-multipart",
+      "title": "Form data requires python-multipart to be installed",
+      "tags": ["formularios", "python-multipart", "instalacion", "uploadfile"],
+      "content": "Este error aparece al iniciar la aplicación cuando alguna operación usa Form(), File(), UploadFile u OAuth2PasswordRequestForm y el paquete python-multipart no está instalado. La solución es ejecutar pip install python-multipart (viene incluido en fastapi[standard]). Para subir archivos se recomienda UploadFile frente a bytes, porque usa un archivo temporal en disco en lugar de cargar todo el contenido en memoria."
+    },
+    {
+      "id": "cors-blocked",
+      "title": "Petición bloqueada por política CORS",
+      "tags": ["cors", "navegador", "middleware", "preflight"],
+      "content": "Cuando el navegador muestra que la petición fue bloqueada por la política CORS, el servidor no devolvió los headers Access-Control-Allow-Origin adecuados. Se soluciona agregando CORSMiddleware con la lista allow_origins correcta, incluyendo protocolo y puerto exactos, por ejemplo http://localhost:5173. Las peticiones con métodos distintos de GET/POST simples o con headers personalizados disparan primero una petición preflight OPTIONS, que también debe ser aceptada por el middleware. No se puede combinar allow_origins=['*'] con allow_credentials=True."
+    },
+    {
+      "id": "event-loop-blocked",
+      "title": "Latencia alta por bloquear el event loop",
+      "tags": ["async", "event-loop", "rendimiento", "threadpool"],
+      "content": "Si todas las peticiones se vuelven lentas cuando una sola operación tarda, probablemente se está ejecutando código bloqueante (time.sleep, requests, drivers de base de datos síncronos) dentro de una función async def. Eso congela el event loop del worker. La solución es usar librerías asíncronas como httpx.AsyncClient o asyncio.sleep, declarar la función con def para que corra en el threadpool, o delegar el trabajo con run_in_threadpool."
+    },
+    {
+      "id": "response-validation-error",
+      "title": "ResponseValidationError al devolver datos",
+      "tags": ["response_model", "pydantic", "500", "orm"],
+      "content": "ResponseValidationError ocurre cuando los datos devueltos por la operación no coinciden con el response_model declarado, por ejemplo porque falta un campo obligatorio o un valor es None donde el modelo no lo admite. El cliente recibe un 500 Internal Server Error, ya que el error es del servidor y no de la petición. Para devolver objetos ORM directamente, el modelo de Pydantic debe declarar model_config = ConfigDict(from_attributes=True)."
+    },
+    {
+      "id": "route-shadowing",
+      "title": "Ruta fija capturada por una ruta con parámetro",
+      "tags": ["routing", "orden", "path-parameters", "422"],
+      "content": "Si una petición a /users/me devuelve 422 diciendo que user_id debe ser entero, la ruta /users/{user_id} está declarada antes que /users/me y captura la petición. FastAPI evalúa las rutas en el orden en que se declaran, por lo que las rutas fijas deben ir antes que las rutas con parámetros que podrían coincidir."
+    },
+    {
+      "id": "jwt-expired",
+      "title": "Token JWT expirado o con firma inválida",
+      "tags": ["jwt", "401", "expiracion", "secret-key"],
+      "content": "Al decodificar un JWT, PyJWT lanza ExpiredSignatureError si el campo exp ya pasó e InvalidTokenError si la firma no coincide, por ejemplo porque el servidor reinició con otra SECRET_KEY generada al azar. La dependencia get_current_user debe capturar estas excepciones y responder 401 con el header WWW-Authenticate: Bearer. Para evitar invalidar todos los tokens en cada reinicio, la SECRET_KEY debe ser fija y leerse desde variables de entorno."
+    }
+  ]
+}

@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 .vscode/
 vectorstore/
+.mypy_cache/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

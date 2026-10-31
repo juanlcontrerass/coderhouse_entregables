@@ -1,0 +1,32 @@
+=== multi_paso ===
+[thread_id=demo-ce7383d1-pedidos]
+Usuario: "¿Cuántos pedidos tuvo Lucía Fernández y cuál fue el total?"
+-> El agente decide usar la herramienta: buscar_cliente(nombre='Lucía Fernández')
+-> La herramienta devuelve: {"cliente_id": 102, "nombre": "Lucía Fernández"}
+-> El agente decide usar la herramienta: listar_pedidos(cliente_id=102)
+-> La herramienta devuelve: {"cantidad": 3, "total": 14500, "pedidos": [{"pedido_id": 1001, "fecha": "2026-03-12", "estado": "entregado", "total": 8500}, {"pedido_id": 1002, "fecha": "2026-06-05", "estado": "entregado", "total": 1500}, {"pedido_id": 1003, "fecha": "2026-09-21", "estado": "en camino", "total": 4500}]}
+Respuesta: Lucía Fernández tuvo 3 pedidos y gastó en total $14.500.
+
+=== memoria ===
+[thread_id=demo-ce7383d1-pedidos]
+Usuario: "¿Y el último?"
+Respuesta: El último pedido de Lucía Fernández fue el 1003, del 2026-09-21, está en camino y totalizó $4.500.
+
+=== reintento ===
+[thread_id=demo-ce7383d1-reintento]
+Usuario: "¿Cuánto gastó en total Lusia Fernandes?"
+-> El agente decide usar la herramienta: buscar_cliente(nombre='Lusia Fernandes')
+-> La herramienta devuelve: {"error": "No hay ningún cliente registrado con el nombre 'Lusia Fernandes'.", "sugerencias": ["Lucía Fernández"]}
+-> El agente decide usar la herramienta: buscar_cliente(nombre='Lucía Fernández')
+-> La herramienta devuelve: {"cliente_id": 102, "nombre": "Lucía Fernández"}
+-> El agente decide usar la herramienta: listar_pedidos(cliente_id=102)
+-> La herramienta devuelve: {"cantidad": 3, "total": 14500, "pedidos": [{"pedido_id": 1001, "fecha": "2026-03-12", "estado": "entregado", "total": 8500}, {"pedido_id": 1002, "fecha": "2026-06-05", "estado": "entregado", "total": 1500}, {"pedido_id": 1003, "fecha": "2026-09-21", "estado": "en camino", "total": 4500}]}
+Respuesta: Asumí que te referías a **Lucía Fernández**. Gastó en total **$14.500**.
+
+=== aclaracion ===
+[thread_id=demo-ce7383d1-aclaracion]
+Usuario: "¿Cuántos pedidos tuvo Roberto Sánchez?"
+-> El agente decide usar la herramienta: buscar_cliente(nombre='Roberto Sánchez')
+-> La herramienta devuelve: {"error": "No hay ningún cliente registrado con el nombre 'Roberto Sánchez'.", "sugerencias": []}
+Respuesta: No encontré ningún cliente registrado con el nombre **Roberto Sánchez**.  
+Si querés, decime el nombre exacto o un apellido parcial y lo busco de nuevo.

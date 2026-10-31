@@ -1,0 +1,180 @@
+{
+  "multi_paso": [
+    {
+      "thread_id": "demo-ce7383d1-pedidos",
+      "pregunta": "¿Cuántos pedidos tuvo Lucía Fernández y cuál fue el total?",
+      "respuesta": "Lucía Fernández tuvo 3 pedidos y gastó en total $14.500.",
+      "herramientas_invocadas": 2,
+      "limite_alcanzado": false,
+      "mensajes": [
+        {
+          "tipo": "HumanMessage",
+          "contenido": "¿Cuántos pedidos tuvo Lucía Fernández y cuál fue el total?"
+        },
+        {
+          "tipo": "AIMessage",
+          "contenido": "",
+          "tool_calls": [
+            {
+              "nombre": "buscar_cliente",
+              "argumentos": {
+                "nombre": "Lucía Fernández"
+              }
+            }
+          ]
+        },
+        {
+          "tipo": "ToolMessage",
+          "contenido": "{\"cliente_id\": 102, \"nombre\": \"Lucía Fernández\"}",
+          "herramienta": "buscar_cliente"
+        },
+        {
+          "tipo": "AIMessage",
+          "contenido": "",
+          "tool_calls": [
+            {
+              "nombre": "listar_pedidos",
+              "argumentos": {
+                "cliente_id": 102
+              }
+            }
+          ]
+        },
+        {
+          "tipo": "ToolMessage",
+          "contenido": "{\"cantidad\": 3, \"total\": 14500, \"pedidos\": [{\"pedido_id\": 1001, \"fecha\": \"2026-03-12\", \"estado\": \"entregado\", \"total\": 8500}, {\"pedido_id\": 1002, \"fecha\": \"2026-06-05\", \"estado\": \"entregado\", \"total\": 1500}, {\"pedido_id\": 1003, \"fecha\": \"2026-09-21\", \"estado\": \"en camino\", \"total\": 4500}]}",
+          "herramienta": "listar_pedidos"
+        },
+        {
+          "tipo": "AIMessage",
+          "contenido": "Lucía Fernández tuvo 3 pedidos y gastó en total $14.500."
+        }
+      ]
+    }
+  ],
+  "memoria": [
+    {
+      "thread_id": "demo-ce7383d1-pedidos",
+      "pregunta": "¿Y el último?",
+      "respuesta": "El último pedido de Lucía Fernández fue el 1003, del 2026-09-21, está en camino y totalizó $4.500.",
+      "herramientas_invocadas": 0,
+      "limite_alcanzado": false,
+      "mensajes": [
+        {
+          "tipo": "HumanMessage",
+          "contenido": "¿Y el último?"
+        },
+        {
+          "tipo": "AIMessage",
+          "contenido": "El último pedido de Lucía Fernández fue el 1003, del 2026-09-21, está en camino y totalizó $4.500."
+        }
+      ]
+    }
+  ],
+  "reintento": [
+    {
+      "thread_id": "demo-ce7383d1-reintento",
+      "pregunta": "¿Cuánto gastó en total Lusia Fernandes?",
+      "respuesta": "Asumí que te referías a **Lucía Fernández**. Gastó en total **$14.500**.",
+      "herramientas_invocadas": 3,
+      "limite_alcanzado": false,
+      "mensajes": [
+        {
+          "tipo": "HumanMessage",
+          "contenido": "¿Cuánto gastó en total Lusia Fernandes?"
+        },
+        {
+          "tipo": "AIMessage",
+          "contenido": "",
+          "tool_calls": [
+            {
+              "nombre": "buscar_cliente",
+              "argumentos": {
+                "nombre": "Lusia Fernandes"
+              }
+            }
+          ]
+        },
+        {
+          "tipo": "ToolMessage",
+          "contenido": "{\"error\": \"No hay ningún cliente registrado con el nombre 'Lusia Fernandes'.\", \"sugerencias\": [\"Lucía Fernández\"]}",
+          "herramienta": "buscar_cliente"
+        },
+        {
+          "tipo": "AIMessage",
+          "contenido": "",
+          "tool_calls": [
+            {
+              "nombre": "buscar_cliente",
+              "argumentos": {
+                "nombre": "Lucía Fernández"
+              }
+            }
+          ]
+        },
+        {
+          "tipo": "ToolMessage",
+          "contenido": "{\"cliente_id\": 102, \"nombre\": \"Lucía Fernández\"}",
+          "herramienta": "buscar_cliente"
+        },
+        {
+          "tipo": "AIMessage",
+          "contenido": "",
+          "tool_calls": [
+            {
+              "nombre": "listar_pedidos",
+              "argumentos": {
+                "cliente_id": 102
+              }
+            }
+          ]
+        },
+        {
+          "tipo": "ToolMessage",
+          "contenido": "{\"cantidad\": 3, \"total\": 14500, \"pedidos\": [{\"pedido_id\": 1001, \"fecha\": \"2026-03-12\", \"estado\": \"entregado\", \"total\": 8500}, {\"pedido_id\": 1002, \"fecha\": \"2026-06-05\", \"estado\": \"entregado\", \"total\": 1500}, {\"pedido_id\": 1003, \"fecha\": \"2026-09-21\", \"estado\": \"en camino\", \"total\": 4500}]}",
+          "herramienta": "listar_pedidos"
+        },
+        {
+          "tipo": "AIMessage",
+          "contenido": "Asumí que te referías a **Lucía Fernández**. Gastó en total **$14.500**."
+        }
+      ]
+    }
+  ],
+  "aclaracion": [
+    {
+      "thread_id": "demo-ce7383d1-aclaracion",
+      "pregunta": "¿Cuántos pedidos tuvo Roberto Sánchez?",
+      "respuesta": "No encontré ningún cliente registrado con el nombre **Roberto Sánchez**.  \nSi querés, decime el nombre exacto o un apellido parcial y lo busco de nuevo.",
+      "herramientas_invocadas": 1,
+      "limite_alcanzado": false,
+      "mensajes": [
+        {
+          "tipo": "HumanMessage",
+          "contenido": "¿Cuántos pedidos tuvo Roberto Sánchez?"
+        },
+        {
+          "tipo": "AIMessage",
+          "contenido": "",
+          "tool_calls": [
+            {
+              "nombre": "buscar_cliente",
+              "argumentos": {
+                "nombre": "Roberto Sánchez"
+              }
+            }
+          ]
+        },
+        {
+          "tipo": "ToolMessage",
+          "contenido": "{\"error\": \"No hay ningún cliente registrado con el nombre 'Roberto Sánchez'.\", \"sugerencias\": []}",
+          "herramienta": "buscar_cliente"
+        },
+        {
+          "tipo": "AIMessage",
+          "contenido": "No encontré ningún cliente registrado con el nombre **Roberto Sánchez**.  \nSi querés, decime el nombre exacto o un apellido parcial y lo busco de nuevo."
+        }
+      ]
+    }
+  ]
+}

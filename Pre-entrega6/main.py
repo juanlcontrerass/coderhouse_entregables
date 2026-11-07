@@ -10,9 +10,11 @@ Uso:
 import argparse
 import asyncio
 import sys
+import uuid
 from typing import Any
 
 from graph import build_graph
+from observability import setup_tracing, shutdown_tracing
 from runner import describe_event, export_diagram, run_query, save_trace
 
 DEMO_QUERIES = [
@@ -27,9 +29,13 @@ def print_event(node: str, update: dict[str, Any]) -> None:
     print(describe_event(node, update), flush=True)
 
 
+# Agrupa en una misma sesión de Phoenix las consultas de esta ejecución (demo o modo interactivo)
+SESSION_ID = f"cli-{uuid.uuid4().hex[:8]}"
+
+
 async def answer(graph: Any, query: str) -> None:
     print(f"\n=== Consulta: {query}\n")
-    state = await run_query(graph, query, on_event=print_event)
+    state = await run_query(graph, query, on_event=print_event, session_id=SESSION_ID)
     print("\n=== Respuesta final\n")
     print(state.get("final_answer", "(sin respuesta)"))
     print(f"\nDelegaciones del supervisor: {' → '.join(d['next_agent'] for d in state['decisions'])}")
@@ -55,16 +61,21 @@ async def main() -> None:
 
     from llm import get_llm
 
-    graph = build_graph(get_llm())
-    if args.demo:
-        for query in DEMO_QUERIES:
-            await answer(graph, query)
-    elif args.query:
-        await answer(graph, args.query)
-    else:
-        print("Orquestador multi-agente (Supervisor + Investigador + Analista). Pulsa Enter sin escribir nada para salir.")
-        while query := input("\nConsulta> ").strip():
-            await answer(graph, query)
+    # Antes de crear el LLM y el grafo, para que los instrumentores envuelvan los clientes
+    setup_tracing()
+    try:
+        graph = build_graph(get_llm())
+        if args.demo:
+            for query in DEMO_QUERIES:
+                await answer(graph, query)
+        elif args.query:
+            await answer(graph, args.query)
+        else:
+            print("Orquestador multi-agente (Supervisor + Investigador + Analista). Pulsa Enter sin escribir nada para salir.")
+            while query := input("\nConsulta> ").strip():
+                await answer(graph, query)
+    finally:
+        shutdown_tracing()  # vacía el BatchSpanProcessor: sin esto se pierden los últimos spans
 
 
 if __name__ == "__main__":

@@ -8,6 +8,11 @@ langchain-text-splitters>=1.0
 sentence-transformers>=3.0
 python-dotenv>=1.0
 pydantic>=2.0
+# Observabilidad: exportador OpenInference hacia Phoenix
+arize-phoenix-otel>=0.10
+openinference-instrumentation-openai>=0.1
+openinference-instrumentation-langchain>=0.1
+openinference-semantic-conventions>=0.1
 pytest>=8.0
 pytest-asyncio>=0.24
 ipykernel>=6.0

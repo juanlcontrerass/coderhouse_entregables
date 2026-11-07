@@ -8,6 +8,7 @@ Uso:
 import argparse
 import sys
 
+from observability import setup_tracing, shutdown_tracing
 from tools.retrieval import build_chroma, buscar_documentos, set_vectorstore
 
 
@@ -16,12 +17,16 @@ def main() -> None:
     parser.add_argument("--rebuild", action="store_true", help="reindexa desde cero")
     args = parser.parse_args()
 
-    store = build_chroma(rebuild=args.rebuild)
-    set_vectorstore(store)
-    count = len(store.get()["ids"])
-    print(f"Colección lista: {count} fragmentos indexados.")
-    print("\nPrueba de búsqueda ('días de vacaciones por antigüedad'):\n")
-    print(buscar_documentos.invoke({"consulta": "días de vacaciones por antigüedad", "k": 2}))
+    setup_tracing()  # la indexación (EMBEDDING) y la búsqueda de prueba (RETRIEVER) llegan a Phoenix
+    try:
+        store = build_chroma(rebuild=args.rebuild)
+        set_vectorstore(store)
+        count = len(store.get()["ids"])
+        print(f"Colección lista: {count} fragmentos indexados.")
+        print("\nPrueba de búsqueda ('días de vacaciones por antigüedad'):\n")
+        print(buscar_documentos.invoke({"consulta": "días de vacaciones por antigüedad", "k": 2}))
+    finally:
+        shutdown_tracing()
 
 
 if __name__ == "__main__":

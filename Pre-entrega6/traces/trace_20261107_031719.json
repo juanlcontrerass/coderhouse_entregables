@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-11-07T03:17:19",
+  "query": "¿Qué ocurre si falto una semana sin avisar a mi empleador? soy despedido inmediatamente? si es asi, me toca indemnización?",
+  "route": [
+    "researcher",
+    "synthesizer"
+  ],
+  "steps": 2,
+  "task_completed": true,
+  "decisions": [
+    {
+      "step": 1,
+      "next_agent": "researcher",
+      "instruction": "Busca en la base documental interna la política o documento aplicable sobre ausencias injustificadas, abandono del puesto, faltas de asistencia sin aviso, consecuencias disciplinarias, despido e indemnización. Devuelve solo hechos relevantes con citas [Fuente: archivo]. Si no existe una regla específica, indícalo explícitamente.",
+      "reasoning": "La consulta pide reglas laborales concretas sobre ausencia de una semana sin aviso, despido e indemnización. No hay contribuciones aún, así que falta evidencia documental del researcher y no se puede sintetizar.",
+      "forced": false
+    },
+    {
+      "step": 2,
+      "next_agent": "synthesizer",
+      "instruction": "Redacta una პასუხ/ respuesta breve en español indicando que, según la documentación interna revisada, no existe una regla específica sobre faltar una semana sin avisar, abandono del puesto, despido inmediato o indemnización. Aclara que las únicas reglas encontradas tratan sobre incumplimientos en teletrabajo y seguridad informática, pero no aplican directamente a esta situación. Evita dar asesoría legal externa; limita la respuesta a lo documentado e incluye las citas [Fuente: archivo] de los hechos relevantes.",
+      "reasoning": "La consulta pide una consecuencia laboral y posible indemnización por faltar una semana sin avisar. El researcher ya indicó explícitamente que no encontró una regla específica sobre ausencias injustificadas, abandono del puesto, despido o indemnización, y aportó solo reglas no equivalentes (teletrabajo y seguridad). No hay cálculos ni análisis pendientes; con la limitación documentada, ya se puede sintetizar informando que no existe base interna específica para responder afirmativamente o negar el despido/indemnización.",
+      "forced": false
+    }
+  ],
+  "contributions": [
+    {
+      "agent": "researcher",
+      "instruction": "Busca en la base documental interna la política o documento aplicable sobre ausencias injustificadas, abandono del puesto, faltas de asistencia sin aviso, consecuencias disciplinarias, despido e indemnización. Devuelve solo hechos relevantes con citas [Fuente: archivo]. Si no existe una regla específica, indícalo explícitamente.",
+      "content": "No encontrado en la base documental una regla específica sobre **ausencias injustificadas**, **abandono del puesto**, **faltas de asistencia sin aviso**, **despido** o **indemnización**.  \n\nSí aparece una regla general relacionada con incumplimientos en teletrabajo:  \n- “El incumplimiento reiterado de disponibilidad puede derivar en la revisión del esquema de teletrabajo asignado.” [Fuente: politica_teletrabajo.md]  \n- “Se considera reiterado cuando el líder registra tres o más incidentes en un mismo trimestre.” [Fuente: politica_teletrabajo.md]  \n- “La revisión la realiza Recursos Humanos junto con el líder, y puede resultar en un esquema con más días presenciales durante un período de prueba de 3 meses.” [Fuente: politica_teletrabajo.md]  \n\nTambién aparece una regla disciplinaria en seguridad informática:  \n- “Reportar un error propio, como haber hecho clic en un enlace de phishing, no tiene consecuencias disciplinarias si se reporta dentro del plazo. Ocultarlo sí puede tenerlas.” [Fuente: politica_seguridad_informatica.md]",
+      "sources": [
+        "politica_teletrabajo.md",
+        "onboarding_nuevos_empleados.md",
+        "politica_seguridad_informatica.md",
+        "politica_vacaciones.md"
+      ],
+      "iteration": 1
+    },
+    {
+      "agent": "synthesizer",
+      "instruction": "Redacta una პასუხ/ respuesta breve en español indicando que, según la documentación interna revisada, no existe una regla específica sobre faltar una semana sin avisar, abandono del puesto, despido inmediato o indemnización. Aclara que las únicas reglas encontradas tratan sobre incumplimientos en teletrabajo y seguridad informática, pero no aplican directamente a esta situación. Evita dar asesoría legal externa; limita la respuesta a lo documentado e incluye las citas [Fuente: archivo] de los hechos relevantes.",
+      "content": "Según la documentación interna revisada, **no hay una regla específica** sobre faltar una semana sin avisar, abandono del puesto, despido inmediato o si corresponde indemnización. Por lo tanto, **no puedo पुष्टि** con esa documentación si te despedirían de inmediato o si tendrías derecho a indemnización.\n\n- No se encontró una norma interna sobre **ausencias injustificadas**, **abandono del puesto**, **faltas sin aviso**, **despido** o **indemnización**.  \n- Las únicas reglas localizadas tratan sobre **incumplimientos en teletrabajo**, donde el incumplimiento reiterado de disponibilidad puede llevar a la revisión del esquema de teletrabajo, y sobre **seguridad informática**, donde ocultar un error propio sí puede tener consecuencias disciplinarias. Estas reglas **no aplican directamente** a tu caso. [Fuente: politica_teletrabajo.md] [Fuente: politica_seguridad_informatica.md]\n\nSi quieres, puedo ayudarte a redactar una consulta interna para RR. HH. basada solo en esta documentación.",
+      "sources": [
+        "politica_teletrabajo.md",
+        "politica_seguridad_informatica.md"
+      ],
+      "iteration": 2
+    },
+    {
+      "agent": "validator",
+      "instruction": "Validar la respuesta final",
+      "content": "Respuesta aprobada.",
+      "sources": [],
+      "iteration": 2
+    }
+  ],
+  "final_answer": "Según la documentación interna revisada, **no hay una regla específica** sobre faltar una semana sin avisar, abandono del puesto, despido inmediato o si corresponde indemnización. Por lo tanto, **no puedo पुष्टि** con esa documentación si te despedirían de inmediato o si tendrías derecho a indemnización.\n\n- No se encontró una norma interna sobre **ausencias injustificadas**, **abandono del puesto**, **faltas sin aviso**, **despido** o **indemnización**.  \n- Las únicas reglas localizadas tratan sobre **incumplimientos en teletrabajo**, donde el incumplimiento reiterado de disponibilidad puede llevar a la revisión del esquema de teletrabajo, y sobre **seguridad informática**, donde ocultar un error propio sí puede tener consecuencias disciplinarias. Estas reglas **no aplican directamente** a tu caso. [Fuente: politica_teletrabajo.md] [Fuente: politica_seguridad_informatica.md]\n\nSi quieres, puedo ayudarte a redactar una consulta interna para RR. HH. basada solo en esta documentación."
+}

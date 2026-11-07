@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import HumanMessage
+from openinference.instrumentation import using_attributes
 
 from config import BASE_DIR, RECURSION_LIMIT, TRACES_DIR
 
@@ -28,19 +29,25 @@ def initial_state(query: str) -> dict[str, Any]:
     }
 
 
-async def run_query(graph: Any, query: str, on_event: EventHandler | None = None) -> dict[str, Any]:
-    """Ejecuta el grafo; `on_event(nodo, actualización)` se llama a medida que avanza."""
+async def run_query(
+    graph: Any, query: str, on_event: EventHandler | None = None, session_id: str | None = None
+) -> dict[str, Any]:
+    """Ejecuta el grafo; `on_event(nodo, actualización)` se llama a medida que avanza.
+
+    `session_id` agrupa en una misma sesión de Phoenix las trazas de varias consultas.
+    """
     final: dict[str, Any] = {}
-    async for mode, chunk in graph.astream(
-        initial_state(query),
-        config={"recursion_limit": RECURSION_LIMIT},
-        stream_mode=["updates", "values"],
-    ):
-        if mode == "values":
-            final = chunk
-        elif on_event:
-            for node, update in chunk.items():
-                on_event(node, update or {})
+    with using_attributes(session_id=session_id or "", tags=["orquestador"], metadata={"query": query}):
+        async for mode, chunk in graph.astream(
+            initial_state(query),
+            config={"recursion_limit": RECURSION_LIMIT, "run_name": "orquestador"},
+            stream_mode=["updates", "values"],
+        ):
+            if mode == "values":
+                final = chunk
+            elif on_event:
+                for node, update in chunk.items():
+                    on_event(node, update or {})
     return final
 
 

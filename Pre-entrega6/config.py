@@ -23,6 +23,11 @@ CHUNK_SIZE = 1000  # caracteres
 CHUNK_OVERLAP = 100
 TOP_K = 4
 
+# --- Observabilidad: exportador OpenInference hacia el servidor local de Phoenix ---
+PHOENIX_COLLECTOR_ENDPOINT = os.getenv("PHOENIX_COLLECTOR_ENDPOINT", "http://localhost:6006/v1/traces")
+PHOENIX_PROJECT_NAME = os.getenv("PHOENIX_PROJECT_NAME", "orquestador-techcorp")
+TRACING_ENABLED = os.getenv("PHOENIX_TRACING", "true").strip().lower() not in ("0", "false", "no")
+
 # --- Condiciones de parada (evitan el "supervisor infinito") ---
 # Decisiones máximas del supervisor por consulta; al alcanzarlas se fuerza la síntesis
 MAX_STEPS = 8

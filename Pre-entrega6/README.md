@@ -61,6 +61,7 @@ graph TD;
 | `prompts.py` | Prompts por rol; el del supervisor contiene la rúbrica de suficiencia |
 | `config.py` / `llm.py` | Configuración, límites y `ChatOpenAI` |
 | `runner.py` | Ejecución en streaming, traza JSON y exportación del diagrama |
+| `observability.py` | Exportador OpenInference hacia Phoenix e instrumentación de OpenAI y LangChain |
 | `ingest.py` | Indexa `data/` en `vectorstore/` |
 | `main.py` | CLI: una consulta, modo interactivo, `--demo` y `--graph` |
 | `demo.ipynb` | Demo del flujo de delegación |
@@ -151,6 +152,27 @@ Ejemplo de salida (abreviado):
 ```
 
 La demo del flujo está en `demo.ipynb` (se abre con el kernel del `.venv`).
+
+## Observabilidad con Phoenix
+
+Cada ejecución (`main.py`, `ingest.py` y `demo.ipynb`) exporta sus trazas en formato **OpenInference** sobre OTLP/HTTP al servidor local de Phoenix, configurado en `observability.py`:
+
+```bash
+phoenix serve
+```
+
+| Qué se instrumenta | Cómo | Span en Phoenix |
+| --- | --- | --- |
+| SDK de OpenAI | `OpenAIInstrumentor` | `LLM`: mensajes, respuesta, tool calls y tokens de cada llamada |
+| LangGraph / LangChain | `LangChainInstrumentor` | `CHAIN` por nodo del grafo, `AGENT` por agente ReAct y `TOOL` por herramienta |
+| Búsqueda en Chroma | Span manual en `tools/retrieval.py` | `RETRIEVER` `chroma.similarity_search`: consulta, top-k y cada fragmento con id, contenido, metadata y score (distancia) |
+| Indexación en Chroma | Span manual en `build_chroma()` | `EMBEDDING` `chroma.add_documents`: modelo de embeddings y cantidad de fragmentos |
+
+Chroma no tiene un instrumentor de OpenInference, por eso sus llamadas se trazan a mano con las convenciones semánticas de OpenInference (`retrieval.documents.*`); así Phoenix las muestra en su vista de documentos recuperados. El span `RETRIEVER` queda anidado dentro del `TOOL` `buscar_documentos`, y este dentro del agente investigador.
+
+Las trazas se ven en <http://localhost:6006>, en el proyecto `orquestador-techcorp`. Las consultas de una misma ejecución de `main.py` comparten un `session_id`, así que la demo o el modo interactivo aparecen agrupados en la pestaña *Sessions*. Variables opcionales en `.env`: `PHOENIX_COLLECTOR_ENDPOINT` (por defecto `http://localhost:6006/v1/traces`), `PHOENIX_PROJECT_NAME` y `PHOENIX_TRACING=false` para desactivar el envío. Si Phoenix no está levantado, el orquestador funciona igual y solo se pierden las trazas.
+
+Las llamadas al modelo aparecen dos veces, una vez por cada instrumentor: el span `LLM` de LangChain (`ChatOpenAI`) contiene al del SDK de OpenAI (`ChatCompletion`), que muestra la petición HTTP real.
 
 ## Tests
 

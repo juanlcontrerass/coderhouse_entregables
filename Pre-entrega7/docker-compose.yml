@@ -1,0 +1,70 @@
+# Levanta todo el sistema: Redis + Phoenix + API + worker.
+#   docker compose up -d --build
+# Solo la infraestructura (para correr API y worker en el .venv local):
+#   docker compose up -d redis phoenix
+
+x-app: &app
+  build: .
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    REDIS_URL: redis://redis:6379/0
+    PHOENIX_COLLECTOR_ENDPOINT: http://phoenix:6006/v1/traces
+    VECTORSTORE_DIR: /srv/vectorstore
+    REPORTS_DIR: /srv/reports
+  depends_on:
+    redis:
+      condition: service_healthy
+    phoenix:
+      condition: service_started
+  restart: unless-stopped
+
+services:
+  redis:
+    # Redis 8 incluye RedisJSON y RediSearch, que necesita el checkpointer de LangGraph
+    image: redis:8
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  phoenix:
+    image: arizephoenix/phoenix:version-21.1.0
+    ports:
+      - "6006:6006"  # UI y colector OTLP por HTTP
+      - "4317:4317"  # colector OTLP por gRPC
+    environment:
+      PHOENIX_WORKING_DIR: /mnt/data
+      # Dashboard local de desarrollo: sin login para recibir trazas sin API key.
+      # En un entorno compartido, quita esta línea y define PHOENIX_API_KEY en el .env.
+      PHOENIX_ENABLE_AUTH: "false"
+      PHOENIX_TELEMETRY_ENABLED: "false"
+    volumes:
+      - phoenix-data:/mnt/data
+
+  api:
+    <<: *app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+
+  worker:
+    <<: *app
+    command: ["arq", "app.worker.WorkerSettings"]
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+      - vectorstore:/srv/vectorstore
+      - ./reports:/srv/reports
+
+volumes:
+  redis-data:
+  phoenix-data:
+  hf-cache:
+  vectorstore:

@@ -1,0 +1,40 @@
+[project]
+name = "intelligence-system"
+version = "1.0.0"
+description = "Sistema de IA de grado de producción: RAG híbrido + agentes con Supervisor (LangGraph) + API FastAPI + trazas en Arize Phoenix."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langgraph>=1.2,<2",
+    "langchain-core>=1.8,<2",
+    "langchain-openai>=1.8,<2",
+    "langchain-text-splitters>=1.1,<2",
+    "pydantic>=2.14,<3",
+    "pydantic-settings>=2.16,<3",
+    "langchain-chroma>=1.1,<2",
+    "langchain-huggingface>=1.2,<2",
+    "sentence-transformers>=6.3",
+    "rank-bm25>=0.2.2",
+    "fastapi>=0.162",
+    "uvicorn[standard]>=0.54",
+    "arq>=0.28",
+    "redis>=5.3,<6",
+    "langgraph-checkpoint-redis>=0.5.2",
+    "arize-phoenix-otel>=0.17",
+    "openinference-instrumentation-langchain>=0.1.86",
+    "httpx>=0.28",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.2", "pytest-asyncio>=1.5", "fakeredis>=2.40"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"

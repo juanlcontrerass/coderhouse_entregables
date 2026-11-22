@@ -1,0 +1,2426 @@
+{
+  "info": {
+    "_postman_id": "8c0e5b1e-3f7a-4c52-9d61-2a4b7e9f1c30",
+    "name": "The Intelligence System",
+    "description": "Pruebas manuales de la API de The Intelligence System (entrega final de Coderhouse · AI Engineering): las mismas 5 pruebas de `scripts/e2e_demo.py`, más los casos de error.\n\n**Uso manual:** ejecute las peticiones de cada carpeta en orden. Las de \"Crear\" guardan `job_id` y `conversation_id` en variables de la colección; las de \"Consultar estado\" se reenvían hasta que el job termina.\n\n**Collection Runner:** recorre todo en orden y repite solo las consultas de estado cada 5 s hasta el estado esperado. Para la prueba 4 con reinicio, ejecute esa carpeta a mano.\n\nCada petición incluye respuestas de ejemplo (selector *Examples*). Los ids, tokens y textos de los ejemplos son ilustrativos: los reales dependen de la ejecución. Con el `trace_id` de cada job se abre su traza en Phoenix (http://localhost:6006).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Sistema",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Verifica la conexión con Redis."
+          },
+          "response": [
+            {
+              "name": "200 Sano",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"ok\",\n  \"redis\": \"ok\",\n  \"version\": \"1.0.0\"\n}"
+            },
+            {
+              "name": "503 Redis no responde",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                }
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"detail\": \"Redis no responde: Error 111 connecting to redis:6379. Connection refused.\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"redis ok\", () => pm.expect(pm.response.json().redis).to.eql(\"ok\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Esquema OpenAPI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/openapi.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "openapi.json"
+              ]
+            },
+            "description": "Contrato completo de la API (el mismo que muestra /docs)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Prueba 1: RAG simple",
+      "description": "Investigador con búsqueda híbrida (BM25 + densa) y respuesta citada. Ruta esperada: researcher → synthesizer.",
+      "item": [
+        {
+          "name": "Crear tarea",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks"
+              ]
+            },
+            "description": "Encola la consulta en una conversación nueva. Responde 202 al instante.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"¿Qué requisitos de contraseñas exige la política de seguridad informática y cada cuánto deben cambiarse?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Encolada",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"¿Qué requisitos de contraseñas exige la política de seguridad informática y cada cuánto deben cambiarse?\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\n  \"conversation_id\": \"0f9e8d7c6b5a49382716f5e4d3c2b1a0\",\n  \"status\": \"PENDING\",\n  \"status_url\": \"/tasks/a1b2c3d4e5f60718293a4b5c6d7e8f90\",\n  \"conversation_url\": \"/conversations/0f9e8d7c6b5a49382716f5e4d3c2b1a0\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"202 Accepted\", () => pm.response.to.have.status(202));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"devuelve job_id y conversation_id\", () => {",
+                  "    pm.expect(body.job_id).to.be.a(\"string\");",
+                  "    pm.expect(body.conversation_id).to.be.a(\"string\");",
+                  "    pm.expect(body.status).to.eql(\"PENDING\");",
+                  "});",
+                  "pm.collectionVariables.set(\"t1_job_id\", body.job_id);",
+                  "pm.collectionVariables.set(\"t1_conversation_id\", body.conversation_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar estado (polling)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{t1_job_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{t1_job_id}}"
+              ]
+            },
+            "description": "Vuelva a enviarla hasta que el estado sea DONE (en el Collection Runner se repite sola cada 5 s). El `trace_id` identifica la traza en Phoenix."
+          },
+          "response": [
+            {
+              "name": "200 En ejecución",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/a1b2c3d4e5f60718293a4b5c6d7e8f90",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "a1b2c3d4e5f60718293a4b5c6d7e8f90"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\n  \"conversation_id\": \"0f9e8d7c6b5a49382716f5e4d3c2b1a0\",\n  \"status\": \"RUNNING\",\n  \"query\": \"¿Qué requisitos de contraseñas exige la política de seguridad informática y cada cuánto deben cambiarse?\",\n  \"publish\": false,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\"\n}"
+            },
+            {
+              "name": "200 Terminada",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/a1b2c3d4e5f60718293a4b5c6d7e8f90",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "a1b2c3d4e5f60718293a4b5c6d7e8f90"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"a1b2c3d4e5f60718293a4b5c6d7e8f90\",\n  \"conversation_id\": \"0f9e8d7c6b5a49382716f5e4d3c2b1a0\",\n  \"status\": \"DONE\",\n  \"query\": \"¿Qué requisitos de contraseñas exige la política de seguridad informática y cada cuánto deben cambiarse?\",\n  \"publish\": false,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\",\n  \"finished_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"result\": {\n    \"final_answer\": \"Las contraseñas deben tener al menos 12 caracteres y combinar mayúsculas, minúsculas, números y símbolos, y deben cambiarse cada 90 días [Fuente: politica_seguridad_informatica.md].\\n\\n- Longitud mínima: 12 caracteres [Fuente: politica_seguridad_informatica.md]\\n- Renovación obligatoria: cada 90 días [Fuente: politica_seguridad_informatica.md]\",\n    \"route\": [\n      \"researcher\",\n      \"synthesizer\"\n    ],\n    \"decisions\": [\n      {\n        \"step\": 1,\n        \"next_agent\": \"researcher\",\n        \"instruction\": \"Busca en la política de seguridad informática los requisitos de contraseñas y su frecuencia de cambio\",\n        \"reasoning\": \"Falta evidencia documental.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 2,\n        \"next_agent\": \"synthesizer\",\n        \"instruction\": \"Responde con los requisitos y la frecuencia, citando la fuente\",\n        \"reasoning\": \"La rúbrica se cumple: hay evidencia citada y no se piden cálculos.\",\n        \"forced\": false\n      }\n    ],\n    \"sources\": [\n      \"politica_seguridad_informatica.md\"\n    ],\n    \"steps\": 2,\n    \"tokens_used\": 6412,\n    \"total_tokens\": 6412,\n    \"task_completed\": true,\n    \"risk_reasons\": [],\n    \"approval\": null,\n    \"published_path\": null\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const wanted = [\"DONE\"];",
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"estado válido\", () => pm.expect([\"PENDING\", \"RUNNING\", \"WAITING_APPROVAL\", \"DONE\", \"REJECTED\", \"FAILED\"]).to.include(body.status));",
+                  "if (body.trace_id) { pm.collectionVariables.set(\"t1_trace_id\", body.trace_id); }",
+                  "const key = \"poll_t1\";",
+                  "const attempts = Number(pm.collectionVariables.get(key) || 0);",
+                  "if (!wanted.includes(body.status) && ![\"DONE\", \"REJECTED\", \"FAILED\"].includes(body.status) && attempts < 120) {",
+                  "    // Todavía en curso: en el Runner se repite esta misma petición cada 5 s (máximo 10 min)",
+                  "    pm.collectionVariables.set(key, attempts + 1);",
+                  "    console.log(`t1: ${body.status}, nuevo intento en 5 s (${attempts + 1})`);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    setTimeout(() => {}, 5000);",
+                  "} else {",
+                  "    pm.collectionVariables.set(key, 0);",
+                  "    pm.test(`estado final esperado: ${wanted.join(\" o \")}`, () => pm.expect(wanted).to.include(body.status));",
+                  "    if (body.result) {",
+                  "        console.log(`t1: ${body.status} | tokens=${body.result.tokens_used} | ruta=${body.result.route.join(\" → \")} | trace_id=${body.trace_id}`);",
+                  "        console.log(body.result.final_answer);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Prueba 2: RAG + cálculo",
+      "description": "Delegación investigador → analista → síntesis: el dato sale del documento y el porcentaje de una herramienta.",
+      "item": [
+        {
+          "name": "Crear tarea",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks"
+              ]
+            },
+            "description": "Encola la consulta en una conversación nueva. Responde 202 al instante.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"¿Cuántos días de teletrabajo permite la política y qué porcentaje de la semana laboral representan?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Encolada",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"¿Cuántos días de teletrabajo permite la política y qué porcentaje de la semana laboral representan?\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"b2c3d4e5f60718293a4b5c6d7e8f90a1\",\n  \"conversation_id\": \"1a0f9e8d7c6b5a49382716f5e4d3c2b1\",\n  \"status\": \"PENDING\",\n  \"status_url\": \"/tasks/b2c3d4e5f60718293a4b5c6d7e8f90a1\",\n  \"conversation_url\": \"/conversations/1a0f9e8d7c6b5a49382716f5e4d3c2b1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"202 Accepted\", () => pm.response.to.have.status(202));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"devuelve job_id y conversation_id\", () => {",
+                  "    pm.expect(body.job_id).to.be.a(\"string\");",
+                  "    pm.expect(body.conversation_id).to.be.a(\"string\");",
+                  "    pm.expect(body.status).to.eql(\"PENDING\");",
+                  "});",
+                  "pm.collectionVariables.set(\"t2_job_id\", body.job_id);",
+                  "pm.collectionVariables.set(\"t2_conversation_id\", body.conversation_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar estado (polling)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{t2_job_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{t2_job_id}}"
+              ]
+            },
+            "description": "Vuelva a enviarla hasta que el estado sea DONE (en el Collection Runner se repite sola cada 5 s). El `trace_id` identifica la traza en Phoenix."
+          },
+          "response": [
+            {
+              "name": "200 En ejecución",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/b2c3d4e5f60718293a4b5c6d7e8f90a1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "b2c3d4e5f60718293a4b5c6d7e8f90a1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"b2c3d4e5f60718293a4b5c6d7e8f90a1\",\n  \"conversation_id\": \"1a0f9e8d7c6b5a49382716f5e4d3c2b1\",\n  \"status\": \"RUNNING\",\n  \"query\": \"¿Cuántos días de teletrabajo permite la política y qué porcentaje de la semana laboral representan?\",\n  \"publish\": false,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\"\n}"
+            },
+            {
+              "name": "200 Terminada",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/b2c3d4e5f60718293a4b5c6d7e8f90a1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "b2c3d4e5f60718293a4b5c6d7e8f90a1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"b2c3d4e5f60718293a4b5c6d7e8f90a1\",\n  \"conversation_id\": \"1a0f9e8d7c6b5a49382716f5e4d3c2b1\",\n  \"status\": \"DONE\",\n  \"query\": \"¿Cuántos días de teletrabajo permite la política y qué porcentaje de la semana laboral representan?\",\n  \"publish\": false,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\",\n  \"finished_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"result\": {\n    \"final_answer\": \"La política permite 3 días de teletrabajo por semana, que representan el 60 % de una semana laboral de 5 días [Fuente: politica_teletrabajo.md].\\n\\n- Días de teletrabajo: 3 por semana [Fuente: politica_teletrabajo.md]\\n- Cálculo: 3 / 5 × 100 = 60 %\",\n    \"route\": [\n      \"researcher\",\n      \"analyst\",\n      \"synthesizer\"\n    ],\n    \"decisions\": [\n      {\n        \"step\": 1,\n        \"next_agent\": \"researcher\",\n        \"instruction\": \"Busca cuántos días de teletrabajo semanales permite la política\",\n        \"reasoning\": \"Falta el dato documental.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 2,\n        \"next_agent\": \"analyst\",\n        \"instruction\": \"Calcula qué porcentaje representan 3 días sobre una semana laboral de 5 días\",\n        \"reasoning\": \"La consulta pide un porcentaje.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 3,\n        \"next_agent\": \"synthesizer\",\n        \"instruction\": \"Responde con el dato y el porcentaje calculado\",\n        \"reasoning\": \"Cobertura, evidencia y cómputo completos.\",\n        \"forced\": false\n      }\n    ],\n    \"sources\": [\n      \"politica_teletrabajo.md\"\n    ],\n    \"steps\": 3,\n    \"tokens_used\": 11873,\n    \"total_tokens\": 11873,\n    \"task_completed\": true,\n    \"risk_reasons\": [],\n    \"approval\": null,\n    \"published_path\": null\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const wanted = [\"DONE\"];",
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"estado válido\", () => pm.expect([\"PENDING\", \"RUNNING\", \"WAITING_APPROVAL\", \"DONE\", \"REJECTED\", \"FAILED\"]).to.include(body.status));",
+                  "if (body.trace_id) { pm.collectionVariables.set(\"t2_trace_id\", body.trace_id); }",
+                  "const key = \"poll_t2\";",
+                  "const attempts = Number(pm.collectionVariables.get(key) || 0);",
+                  "if (!wanted.includes(body.status) && ![\"DONE\", \"REJECTED\", \"FAILED\"].includes(body.status) && attempts < 120) {",
+                  "    // Todavía en curso: en el Runner se repite esta misma petición cada 5 s (máximo 10 min)",
+                  "    pm.collectionVariables.set(key, attempts + 1);",
+                  "    console.log(`t2: ${body.status}, nuevo intento en 5 s (${attempts + 1})`);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    setTimeout(() => {}, 5000);",
+                  "} else {",
+                  "    pm.collectionVariables.set(key, 0);",
+                  "    pm.test(`estado final esperado: ${wanted.join(\" o \")}`, () => pm.expect(wanted).to.include(body.status));",
+                  "    if (body.result) {",
+                  "        console.log(`t2: ${body.status} | tokens=${body.result.tokens_used} | ruta=${body.result.route.join(\" → \")} | trace_id=${body.trace_id}`);",
+                  "        console.log(body.result.final_answer);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Prueba 3: RAG + sentimiento",
+      "description": "El investigador recupera los comentarios de la encuesta y el analista usa `analizar_sentimiento`.",
+      "item": [
+        {
+          "name": "Crear tarea",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks"
+              ]
+            },
+            "description": "Encola la consulta en una conversación nueva. Responde 202 al instante.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"Busca los comentarios abiertos de la encuesta de clima 2025 y analiza su sentimiento.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Encolada",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"Busca los comentarios abiertos de la encuesta de clima 2025 y analiza su sentimiento.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"c3d4e5f60718293a4b5c6d7e8f90a1b2\",\n  \"conversation_id\": \"2b1a0f9e8d7c6b5a49382716f5e4d3c2\",\n  \"status\": \"PENDING\",\n  \"status_url\": \"/tasks/c3d4e5f60718293a4b5c6d7e8f90a1b2\",\n  \"conversation_url\": \"/conversations/2b1a0f9e8d7c6b5a49382716f5e4d3c2\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"202 Accepted\", () => pm.response.to.have.status(202));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"devuelve job_id y conversation_id\", () => {",
+                  "    pm.expect(body.job_id).to.be.a(\"string\");",
+                  "    pm.expect(body.conversation_id).to.be.a(\"string\");",
+                  "    pm.expect(body.status).to.eql(\"PENDING\");",
+                  "});",
+                  "pm.collectionVariables.set(\"t3_job_id\", body.job_id);",
+                  "pm.collectionVariables.set(\"t3_conversation_id\", body.conversation_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar estado (polling)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{t3_job_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{t3_job_id}}"
+              ]
+            },
+            "description": "Vuelva a enviarla hasta que el estado sea DONE (en el Collection Runner se repite sola cada 5 s). El `trace_id` identifica la traza en Phoenix."
+          },
+          "response": [
+            {
+              "name": "200 En ejecución",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/c3d4e5f60718293a4b5c6d7e8f90a1b2",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "c3d4e5f60718293a4b5c6d7e8f90a1b2"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"c3d4e5f60718293a4b5c6d7e8f90a1b2\",\n  \"conversation_id\": \"2b1a0f9e8d7c6b5a49382716f5e4d3c2\",\n  \"status\": \"RUNNING\",\n  \"query\": \"Busca los comentarios abiertos de la encuesta de clima 2025 y analiza su sentimiento.\",\n  \"publish\": false,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\"\n}"
+            },
+            {
+              "name": "200 Terminada",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/c3d4e5f60718293a4b5c6d7e8f90a1b2",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "c3d4e5f60718293a4b5c6d7e8f90a1b2"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"c3d4e5f60718293a4b5c6d7e8f90a1b2\",\n  \"conversation_id\": \"2b1a0f9e8d7c6b5a49382716f5e4d3c2\",\n  \"status\": \"DONE\",\n  \"query\": \"Busca los comentarios abiertos de la encuesta de clima 2025 y analiza su sentimiento.\",\n  \"publish\": false,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\",\n  \"finished_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"result\": {\n    \"final_answer\": \"Los comentarios de la encuesta de clima 2025 muestran un sentimiento mixto: 3 positivos, 1 neutral y 2 negativos (puntaje promedio 0,12) [Fuente: encuesta_clima_2025.md].\\n\\n- Positivo: flexibilidad del teletrabajo y buen clima de equipo\\n- Negativo: sobrecarga en Soporte y falta de reconocimiento\",\n    \"route\": [\n      \"researcher\",\n      \"analyst\",\n      \"synthesizer\"\n    ],\n    \"decisions\": [\n      {\n        \"step\": 1,\n        \"next_agent\": \"researcher\",\n        \"instruction\": \"Busca los comentarios abiertos textuales de la encuesta de clima 2025\",\n        \"reasoning\": \"Faltan los textos.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 2,\n        \"next_agent\": \"analyst\",\n        \"instruction\": \"Analiza el sentimiento de los comentarios recuperados\",\n        \"reasoning\": \"La consulta pide sentimiento.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 3,\n        \"next_agent\": \"synthesizer\",\n        \"instruction\": \"Resume la distribución y los temas\",\n        \"reasoning\": \"Rúbrica cumplida.\",\n        \"forced\": false\n      }\n    ],\n    \"sources\": [\n      \"encuesta_clima_2025.md\"\n    ],\n    \"steps\": 3,\n    \"tokens_used\": 14260,\n    \"total_tokens\": 14260,\n    \"task_completed\": true,\n    \"risk_reasons\": [],\n    \"approval\": null,\n    \"published_path\": null\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const wanted = [\"DONE\"];",
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"estado válido\", () => pm.expect([\"PENDING\", \"RUNNING\", \"WAITING_APPROVAL\", \"DONE\", \"REJECTED\", \"FAILED\"]).to.include(body.status));",
+                  "if (body.trace_id) { pm.collectionVariables.set(\"t3_trace_id\", body.trace_id); }",
+                  "const key = \"poll_t3\";",
+                  "const attempts = Number(pm.collectionVariables.get(key) || 0);",
+                  "if (!wanted.includes(body.status) && ![\"DONE\", \"REJECTED\", \"FAILED\"].includes(body.status) && attempts < 120) {",
+                  "    // Todavía en curso: en el Runner se repite esta misma petición cada 5 s (máximo 10 min)",
+                  "    pm.collectionVariables.set(key, attempts + 1);",
+                  "    console.log(`t3: ${body.status}, nuevo intento en 5 s (${attempts + 1})`);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    setTimeout(() => {}, 5000);",
+                  "} else {",
+                  "    pm.collectionVariables.set(key, 0);",
+                  "    pm.test(`estado final esperado: ${wanted.join(\" o \")}`, () => pm.expect(wanted).to.include(body.status));",
+                  "    if (body.result) {",
+                  "        console.log(`t3: ${body.status} | tokens=${body.result.tokens_used} | ruta=${body.result.route.join(\" → \")} | trace_id=${body.trace_id}`);",
+                  "        console.log(body.result.final_answer);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Prueba 4: conversación con reinicio",
+      "description": "Demuestra el checkpointer: el historial vive en Redis (`thread_id = conversation_id`).\n\n1. Cree la conversación y envíe el turno 1; espere DONE.\n2. **Reinicie la API y el worker** en una terminal: `docker compose restart api worker` (espere a que `GET /health` responda).\n3. Envíe el turno 2: es una repregunta (\"¿Y con 12 años?\") que solo se entiende con el historial.\n4. Consulte el historial: aparecen los dos turnos. En Phoenix, ambos quedan en la misma sesión (pestaña *Sessions*).",
+      "item": [
+        {
+          "name": "Crear conversación",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations"
+              ]
+            },
+            "description": "Crea una conversación vacía y guarda su id."
+          },
+          "response": [
+            {
+              "name": "201 Creada",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/conversations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "conversations"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"conversation_id\": \"3c2b1a0f9e8d7c6b5a49382716f5e4d3\",\n  \"messages_url\": \"/conversations/3c2b1a0f9e8d7c6b5a49382716f5e4d3/messages\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set(\"t4_conversation_id\", body.conversation_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Turno 1: enviar mensaje",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{t4_conversation_id}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations",
+                "{{t4_conversation_id}}",
+                "messages"
+              ]
+            },
+            "description": "Primer turno de la conversación.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"¿Cuántos días de vacaciones corresponden con 3 años de antigüedad?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Encolado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/conversations/3c2b1a0f9e8d7c6b5a49382716f5e4d3/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "conversations",
+                    "3c2b1a0f9e8d7c6b5a49382716f5e4d3",
+                    "messages"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"¿Cuántos días de vacaciones corresponden con 3 años de antigüedad?\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"d4e5f60718293a4b5c6d7e8f90a1b2c3\",\n  \"conversation_id\": \"3c2b1a0f9e8d7c6b5a49382716f5e4d3\",\n  \"status\": \"PENDING\",\n  \"status_url\": \"/tasks/d4e5f60718293a4b5c6d7e8f90a1b2c3\",\n  \"conversation_url\": \"/conversations/3c2b1a0f9e8d7c6b5a49382716f5e4d3\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"202 Accepted\", () => pm.response.to.have.status(202));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"devuelve job_id y conversation_id\", () => {",
+                  "    pm.expect(body.job_id).to.be.a(\"string\");",
+                  "    pm.expect(body.conversation_id).to.be.a(\"string\");",
+                  "    pm.expect(body.status).to.eql(\"PENDING\");",
+                  "});",
+                  "pm.collectionVariables.set(\"t4a_job_id\", body.job_id);",
+                  "pm.collectionVariables.set(\"t4a_conversation_id\", body.conversation_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Turno 1: consultar estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{t4a_job_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{t4a_job_id}}"
+              ]
+            },
+            "description": "Repita hasta DONE."
+          },
+          "response": [
+            {
+              "name": "200 Terminado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/d4e5f60718293a4b5c6d7e8f90a1b2c3",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "d4e5f60718293a4b5c6d7e8f90a1b2c3"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"d4e5f60718293a4b5c6d7e8f90a1b2c3\",\n  \"conversation_id\": \"3c2b1a0f9e8d7c6b5a49382716f5e4d3\",\n  \"status\": \"DONE\",\n  \"query\": \"¿Cuántos días de vacaciones corresponden con 3 años de antigüedad?\",\n  \"publish\": false,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\",\n  \"finished_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"result\": {\n    \"final_answer\": \"Con 3 años de antigüedad corresponden 14 días de vacaciones [Fuente: politica_vacaciones.md].\",\n    \"route\": [\n      \"researcher\",\n      \"synthesizer\"\n    ],\n    \"decisions\": [\n      {\n        \"step\": 1,\n        \"next_agent\": \"researcher\",\n        \"instruction\": \"Busca los días de vacaciones con 3 años de antigüedad\",\n        \"reasoning\": \"Falta el dato.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 2,\n        \"next_agent\": \"synthesizer\",\n        \"instruction\": \"Responde con el dato citado\",\n        \"reasoning\": \"Rúbrica cumplida.\",\n        \"forced\": false\n      }\n    ],\n    \"sources\": [\n      \"politica_vacaciones.md\"\n    ],\n    \"steps\": 2,\n    \"tokens_used\": 5980,\n    \"total_tokens\": 5980,\n    \"task_completed\": true,\n    \"risk_reasons\": [],\n    \"approval\": null,\n    \"published_path\": null\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const wanted = [\"DONE\"];",
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"estado válido\", () => pm.expect([\"PENDING\", \"RUNNING\", \"WAITING_APPROVAL\", \"DONE\", \"REJECTED\", \"FAILED\"]).to.include(body.status));",
+                  "if (body.trace_id) { pm.collectionVariables.set(\"t4a_trace_id\", body.trace_id); }",
+                  "const key = \"poll_t4a\";",
+                  "const attempts = Number(pm.collectionVariables.get(key) || 0);",
+                  "if (!wanted.includes(body.status) && ![\"DONE\", \"REJECTED\", \"FAILED\"].includes(body.status) && attempts < 120) {",
+                  "    // Todavía en curso: en el Runner se repite esta misma petición cada 5 s (máximo 10 min)",
+                  "    pm.collectionVariables.set(key, attempts + 1);",
+                  "    console.log(`t4a: ${body.status}, nuevo intento en 5 s (${attempts + 1})`);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    setTimeout(() => {}, 5000);",
+                  "} else {",
+                  "    pm.collectionVariables.set(key, 0);",
+                  "    pm.test(`estado final esperado: ${wanted.join(\" o \")}`, () => pm.expect(wanted).to.include(body.status));",
+                  "    if (body.result) {",
+                  "        console.log(`t4a: ${body.status} | tokens=${body.result.tokens_used} | ruta=${body.result.route.join(\" → \")} | trace_id=${body.trace_id}`);",
+                  "        console.log(body.result.final_answer);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Turno 2: repregunta (después del reinicio)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{t4_conversation_id}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations",
+                "{{t4_conversation_id}}",
+                "messages"
+              ]
+            },
+            "description": "Antes de enviarla, ejecute `docker compose restart api worker`. Si el turno 1 no terminó, la API responde 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"¿Y con 12 años? ¿En qué porcentaje supera al caso anterior?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Encolado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/conversations/3c2b1a0f9e8d7c6b5a49382716f5e4d3/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "conversations",
+                    "3c2b1a0f9e8d7c6b5a49382716f5e4d3",
+                    "messages"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"¿Y con 12 años? ¿En qué porcentaje supera al caso anterior?\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"e5f60718293a4b5c6d7e8f90a1b2c3d4\",\n  \"conversation_id\": \"3c2b1a0f9e8d7c6b5a49382716f5e4d3\",\n  \"status\": \"PENDING\",\n  \"status_url\": \"/tasks/e5f60718293a4b5c6d7e8f90a1b2c3d4\",\n  \"conversation_url\": \"/conversations/3c2b1a0f9e8d7c6b5a49382716f5e4d3\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"202 Accepted\", () => pm.response.to.have.status(202));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"devuelve job_id y conversation_id\", () => {",
+                  "    pm.expect(body.job_id).to.be.a(\"string\");",
+                  "    pm.expect(body.conversation_id).to.be.a(\"string\");",
+                  "    pm.expect(body.status).to.eql(\"PENDING\");",
+                  "});",
+                  "pm.collectionVariables.set(\"t4b_job_id\", body.job_id);",
+                  "pm.collectionVariables.set(\"t4b_conversation_id\", body.conversation_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Turno 2: consultar estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{t4b_job_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{t4b_job_id}}"
+              ]
+            },
+            "description": "Repita hasta DONE. `total_tokens` acumula los dos turnos."
+          },
+          "response": [
+            {
+              "name": "200 Terminado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/e5f60718293a4b5c6d7e8f90a1b2c3d4",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "e5f60718293a4b5c6d7e8f90a1b2c3d4"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"e5f60718293a4b5c6d7e8f90a1b2c3d4\",\n  \"conversation_id\": \"3c2b1a0f9e8d7c6b5a49382716f5e4d3\",\n  \"status\": \"DONE\",\n  \"query\": \"¿Y con 12 años? ¿En qué porcentaje supera al caso anterior?\",\n  \"publish\": false,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\",\n  \"finished_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"result\": {\n    \"final_answer\": \"Con 12 años corresponden 28 días, un 100 % más que los 14 días de 3 años [Fuente: politica_vacaciones.md].\\n\\n- 12 años: 28 días [Fuente: politica_vacaciones.md]\\n- Variación: (28 - 14) / 14 × 100 = +100 %\",\n    \"route\": [\n      \"researcher\",\n      \"analyst\",\n      \"synthesizer\"\n    ],\n    \"decisions\": [\n      {\n        \"step\": 1,\n        \"next_agent\": \"researcher\",\n        \"instruction\": \"Busca los días de vacaciones con 12 y con 3 años de antigüedad (repregunta del turno anterior)\",\n        \"reasoning\": \"Es una repregunta: el historial indica que se compara con 3 años.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 2,\n        \"next_agent\": \"analyst\",\n        \"instruction\": \"Calcula la variación porcentual de 14 a 28 días\",\n        \"reasoning\": \"Se pide un porcentaje.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 3,\n        \"next_agent\": \"synthesizer\",\n        \"instruction\": \"Responde la repregunta con el dato y el cálculo\",\n        \"reasoning\": \"Rúbrica cumplida.\",\n        \"forced\": false\n      }\n    ],\n    \"sources\": [\n      \"politica_vacaciones.md\"\n    ],\n    \"steps\": 3,\n    \"tokens_used\": 10544,\n    \"total_tokens\": 16524,\n    \"task_completed\": true,\n    \"risk_reasons\": [],\n    \"approval\": null,\n    \"published_path\": null\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const wanted = [\"DONE\"];",
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"estado válido\", () => pm.expect([\"PENDING\", \"RUNNING\", \"WAITING_APPROVAL\", \"DONE\", \"REJECTED\", \"FAILED\"]).to.include(body.status));",
+                  "if (body.trace_id) { pm.collectionVariables.set(\"t4b_trace_id\", body.trace_id); }",
+                  "const key = \"poll_t4b\";",
+                  "const attempts = Number(pm.collectionVariables.get(key) || 0);",
+                  "if (!wanted.includes(body.status) && ![\"DONE\", \"REJECTED\", \"FAILED\"].includes(body.status) && attempts < 120) {",
+                  "    // Todavía en curso: en el Runner se repite esta misma petición cada 5 s (máximo 10 min)",
+                  "    pm.collectionVariables.set(key, attempts + 1);",
+                  "    console.log(`t4b: ${body.status}, nuevo intento en 5 s (${attempts + 1})`);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    setTimeout(() => {}, 5000);",
+                  "} else {",
+                  "    pm.collectionVariables.set(key, 0);",
+                  "    pm.test(`estado final esperado: ${wanted.join(\" o \")}`, () => pm.expect(wanted).to.include(body.status));",
+                  "    if (body.result) {",
+                  "        console.log(`t4b: ${body.status} | tokens=${body.result.tokens_used} | ruta=${body.result.route.join(\" → \")} | trace_id=${body.trace_id}`);",
+                  "        console.log(body.result.final_answer);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historial de la conversación",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{t4_conversation_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations",
+                "{{t4_conversation_id}}"
+              ]
+            },
+            "description": "Lee el historial del checkpoint de LangGraph, sin ejecutar el grafo."
+          },
+          "response": [
+            {
+              "name": "200 Historial",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/conversations/3c2b1a0f9e8d7c6b5a49382716f5e4d3",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "conversations",
+                    "3c2b1a0f9e8d7c6b5a49382716f5e4d3"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"conversation_id\": \"3c2b1a0f9e8d7c6b5a49382716f5e4d3\",\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"active_job_id\": null,\n  \"job_ids\": [\n    \"d4e5f60718293a4b5c6d7e8f90a1b2c3\",\n    \"e5f60718293a4b5c6d7e8f90a1b2c3d4\"\n  ],\n  \"turns\": [\n    {\n      \"query\": \"¿Cuántos días de vacaciones corresponden con 3 años de antigüedad?\",\n      \"answer\": \"Con 3 años de antigüedad corresponden 14 días de vacaciones [Fuente: politica_vacaciones.md].\"\n    },\n    {\n      \"query\": \"¿Y con 12 años? ¿En qué porcentaje supera al caso anterior?\",\n      \"answer\": \"Con 12 años corresponden 28 días, un 100 % más que los 14 días de 3 años [Fuente: politica_vacaciones.md].\\n\\n- 12 años: 28 días [Fuente: politica_vacaciones.md]\\n- Variación: (28 - 14) / 14 × 100 = +100 %\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"tiene los dos turnos respondidos\", () => {",
+                  "    pm.expect(body.turns.length).to.be.at.least(2);",
+                  "    body.turns.forEach(t => pm.expect(t.answer).to.be.a(\"string\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Prueba 5: tarea crítica (Human-in-the-loop)",
+      "description": "La consulta pide publicar el informe (efecto lateral). El grafo se detiene en `human_approval` con `interrupt()` y el job queda en `WAITING_APPROVAL` hasta que una persona decide.\n\nUse **Aprobar** (publica el informe en `reports/` y termina en DONE) **o** **Rechazar** (no publica y termina en REJECTED): solo una de las dos, porque después de decidir el job ya no espera aprobación (409).",
+      "item": [
+        {
+          "name": "Crear tarea crítica",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks"
+              ]
+            },
+            "description": "`publish: true` (o un verbo como \"publica\" en la consulta) la vuelve crítica.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"Calcula la variación porcentual del eNPS 2025 respecto de 2024 y publica el informe para RR. HH.\",\n  \"publish\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Encolada",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"Calcula la variación porcentual del eNPS 2025 respecto de 2024 y publica el informe para RR. HH.\",\n  \"publish\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"f60718293a4b5c6d7e8f90a1b2c3d4e5\",\n  \"conversation_id\": \"4d3c2b1a0f9e8d7c6b5a49382716f5e4\",\n  \"status\": \"PENDING\",\n  \"status_url\": \"/tasks/f60718293a4b5c6d7e8f90a1b2c3d4e5\",\n  \"conversation_url\": \"/conversations/4d3c2b1a0f9e8d7c6b5a49382716f5e4\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"202 Accepted\", () => pm.response.to.have.status(202));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"devuelve job_id y conversation_id\", () => {",
+                  "    pm.expect(body.job_id).to.be.a(\"string\");",
+                  "    pm.expect(body.conversation_id).to.be.a(\"string\");",
+                  "    pm.expect(body.status).to.eql(\"PENDING\");",
+                  "});",
+                  "pm.collectionVariables.set(\"t5_job_id\", body.job_id);",
+                  "pm.collectionVariables.set(\"t5_conversation_id\", body.conversation_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar estado hasta WAITING_APPROVAL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{t5_job_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{t5_job_id}}"
+              ]
+            },
+            "description": "Repita hasta WAITING_APPROVAL. `approval_request` trae los motivos y una vista previa de la respuesta."
+          },
+          "response": [
+            {
+              "name": "200 Esperando aprobación",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/f60718293a4b5c6d7e8f90a1b2c3d4e5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "f60718293a4b5c6d7e8f90a1b2c3d4e5"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"f60718293a4b5c6d7e8f90a1b2c3d4e5\",\n  \"conversation_id\": \"4d3c2b1a0f9e8d7c6b5a49382716f5e4\",\n  \"status\": \"WAITING_APPROVAL\",\n  \"query\": \"Calcula la variación porcentual del eNPS 2025 respecto de 2024 y publica el informe para RR. HH.\",\n  \"publish\": true,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\",\n  \"approval_request\": {\n    \"tipo\": \"aprobacion_requerida\",\n    \"motivos\": [\n      \"Efecto lateral: la tarea pide publicar el informe (herramienta publicar_informe).\"\n    ],\n    \"accion_pendiente\": \"publicar_informe\",\n    \"tokens_usados\": 12187,\n    \"vista_previa\": \"El eNPS pasó de 12 puntos en 2024 a 21 en 2025, una variación de +75 % [Fuente: encuesta_clima_2025.md].\\n\\n- eNPS 2024: 12 · eNPS 2025: 21 [Fuente: encuesta_clima_2025.md]\\n- Variación: (21 - 12) / 12 × 100 = +75 %\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const wanted = [\"WAITING_APPROVAL\"];",
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"estado válido\", () => pm.expect([\"PENDING\", \"RUNNING\", \"WAITING_APPROVAL\", \"DONE\", \"REJECTED\", \"FAILED\"]).to.include(body.status));",
+                  "if (body.trace_id) { pm.collectionVariables.set(\"t5_trace_id\", body.trace_id); }",
+                  "const key = \"poll_t5\";",
+                  "const attempts = Number(pm.collectionVariables.get(key) || 0);",
+                  "if (!wanted.includes(body.status) && ![\"DONE\", \"REJECTED\", \"FAILED\"].includes(body.status) && attempts < 120) {",
+                  "    // Todavía en curso: en el Runner se repite esta misma petición cada 5 s (máximo 10 min)",
+                  "    pm.collectionVariables.set(key, attempts + 1);",
+                  "    console.log(`t5: ${body.status}, nuevo intento en 5 s (${attempts + 1})`);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    setTimeout(() => {}, 5000);",
+                  "} else {",
+                  "    pm.collectionVariables.set(key, 0);",
+                  "    pm.test(`estado final esperado: ${wanted.join(\" o \")}`, () => pm.expect(wanted).to.include(body.status));",
+                  "    if (body.result) {",
+                  "        console.log(`t5: ${body.status} | tokens=${body.result.tokens_used} | ruta=${body.result.route.join(\" → \")} | trace_id=${body.trace_id}`);",
+                  "        console.log(body.result.final_answer);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aprobar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{t5_job_id}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{t5_job_id}}",
+                "approve"
+              ]
+            },
+            "description": "Aprueba la acción pendiente y reencola la reanudación.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"comment\": \"Revisado por RR. HH.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Aprobada",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/f60718293a4b5c6d7e8f90a1b2c3d4e5/approve",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "f60718293a4b5c6d7e8f90a1b2c3d4e5",
+                    "approve"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"approved\": true,\n  \"comment\": \"Revisado por RR. HH.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"f60718293a4b5c6d7e8f90a1b2c3d4e5\",\n  \"conversation_id\": \"4d3c2b1a0f9e8d7c6b5a49382716f5e4\",\n  \"status\": \"PENDING\",\n  \"query\": \"Calcula la variación porcentual del eNPS 2025 respecto de 2024 y publica el informe para RR. HH.\",\n  \"publish\": true,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"approval\": {\n    \"approved\": true,\n    \"comment\": \"Revisado por RR. HH.\"\n  },\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\"\n}"
+            },
+            {
+              "name": "409 Ya no espera aprobación",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/f60718293a4b5c6d7e8f90a1b2c3d4e5/approve",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "f60718293a4b5c6d7e8f90a1b2c3d4e5",
+                    "approve"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"approved\": true,\n  \"comment\": \"Revisado por RR. HH.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"detail\": \"La tarea f60718293a4b5c6d7e8f90a1b2c3d4e5 no espera aprobación (estado actual: DONE).\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"202 Accepted\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"vuelve a PENDING para reanudar\", () => pm.expect(pm.response.json().status).to.eql(\"PENDING\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar estado final",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{t5_job_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{t5_job_id}}"
+              ]
+            },
+            "description": "Repita hasta DONE (aprobada) o REJECTED (rechazada). Con aprobación, `published_path` indica el informe."
+          },
+          "response": [
+            {
+              "name": "200 Aprobada y publicada",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/f60718293a4b5c6d7e8f90a1b2c3d4e5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "f60718293a4b5c6d7e8f90a1b2c3d4e5"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"f60718293a4b5c6d7e8f90a1b2c3d4e5\",\n  \"conversation_id\": \"4d3c2b1a0f9e8d7c6b5a49382716f5e4\",\n  \"status\": \"DONE\",\n  \"query\": \"Calcula la variación porcentual del eNPS 2025 respecto de 2024 y publica el informe para RR. HH.\",\n  \"publish\": true,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\",\n  \"finished_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"approval\": {\n    \"approved\": true,\n    \"comment\": \"Revisado por RR. HH.\"\n  },\n  \"result\": {\n    \"final_answer\": \"El eNPS pasó de 12 puntos en 2024 a 21 en 2025, una variación de +75 % [Fuente: encuesta_clima_2025.md].\\n\\n- eNPS 2024: 12 · eNPS 2025: 21 [Fuente: encuesta_clima_2025.md]\\n- Variación: (21 - 12) / 12 × 100 = +75 %\",\n    \"route\": [\n      \"researcher\",\n      \"analyst\",\n      \"synthesizer\"\n    ],\n    \"decisions\": [\n      {\n        \"step\": 1,\n        \"next_agent\": \"researcher\",\n        \"instruction\": \"Busca el eNPS 2024 y 2025 en la encuesta de clima\",\n        \"reasoning\": \"Faltan los datos.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 2,\n        \"next_agent\": \"analyst\",\n        \"instruction\": \"Calcula la variación porcentual de 12 a 21\",\n        \"reasoning\": \"Se pide una variación.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 3,\n        \"next_agent\": \"synthesizer\",\n        \"instruction\": \"Redacta el informe con los datos y el cálculo\",\n        \"reasoning\": \"Rúbrica cumplida.\",\n        \"forced\": false\n      }\n    ],\n    \"sources\": [\n      \"encuesta_clima_2025.md\"\n    ],\n    \"steps\": 3,\n    \"tokens_used\": 12187,\n    \"total_tokens\": 12187,\n    \"task_completed\": true,\n    \"risk_reasons\": [\n      \"Efecto lateral: la tarea pide publicar el informe (herramienta publicar_informe).\"\n    ],\n    \"approval\": {\n      \"approved\": true,\n      \"comment\": \"Revisado por RR. HH.\"\n    },\n    \"published_path\": \"/srv/reports/informe_f60718293a4b5c6d7e8f90a1b2c3d4e5.md\"\n  }\n}"
+            },
+            {
+              "name": "200 Rechazada",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/f60718293a4b5c6d7e8f90a1b2c3d4e5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "f60718293a4b5c6d7e8f90a1b2c3d4e5"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"f60718293a4b5c6d7e8f90a1b2c3d4e5\",\n  \"conversation_id\": \"4d3c2b1a0f9e8d7c6b5a49382716f5e4\",\n  \"status\": \"REJECTED\",\n  \"query\": \"Calcula la variación porcentual del eNPS 2025 respecto de 2024 y publica el informe para RR. HH.\",\n  \"publish\": true,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"started_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"trace_id\": \"7f3c1a9e5b2d4c8fa1e6d0b9c3f27a14\",\n  \"finished_at\": \"2026-11-22T14:03:29.877+00:00\",\n  \"approval\": {\n    \"approved\": false,\n    \"comment\": \"No publicar hasta validar con Dirección.\"\n  },\n  \"result\": {\n    \"final_answer\": \"El eNPS pasó de 12 puntos en 2024 a 21 en 2025, una variación de +75 % [Fuente: encuesta_clima_2025.md].\\n\\n- eNPS 2024: 12 · eNPS 2025: 21 [Fuente: encuesta_clima_2025.md]\\n- Variación: (21 - 12) / 12 × 100 = +75 %\",\n    \"route\": [\n      \"researcher\",\n      \"analyst\",\n      \"synthesizer\"\n    ],\n    \"decisions\": [\n      {\n        \"step\": 1,\n        \"next_agent\": \"researcher\",\n        \"instruction\": \"Busca el eNPS 2024 y 2025 en la encuesta de clima\",\n        \"reasoning\": \"Faltan los datos.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 2,\n        \"next_agent\": \"analyst\",\n        \"instruction\": \"Calcula la variación porcentual de 12 a 21\",\n        \"reasoning\": \"Se pide una variación.\",\n        \"forced\": false\n      },\n      {\n        \"step\": 3,\n        \"next_agent\": \"synthesizer\",\n        \"instruction\": \"Redacta el informe con los datos y el cálculo\",\n        \"reasoning\": \"Rúbrica cumplida.\",\n        \"forced\": false\n      }\n    ],\n    \"sources\": [\n      \"encuesta_clima_2025.md\"\n    ],\n    \"steps\": 3,\n    \"tokens_used\": 12187,\n    \"total_tokens\": 12187,\n    \"task_completed\": true,\n    \"risk_reasons\": [\n      \"Efecto lateral: la tarea pide publicar el informe (herramienta publicar_informe).\"\n    ],\n    \"approval\": {\n      \"approved\": false,\n      \"comment\": \"No publicar hasta validar con Dirección.\"\n    },\n    \"published_path\": null\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const wanted = [\"DONE\", \"REJECTED\"];",
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"estado válido\", () => pm.expect([\"PENDING\", \"RUNNING\", \"WAITING_APPROVAL\", \"DONE\", \"REJECTED\", \"FAILED\"]).to.include(body.status));",
+                  "if (body.trace_id) { pm.collectionVariables.set(\"t5_trace_id\", body.trace_id); }",
+                  "const key = \"poll_t5\";",
+                  "const attempts = Number(pm.collectionVariables.get(key) || 0);",
+                  "if (!wanted.includes(body.status) && ![\"DONE\", \"REJECTED\", \"FAILED\"].includes(body.status) && attempts < 120) {",
+                  "    // Todavía en curso: en el Runner se repite esta misma petición cada 5 s (máximo 10 min)",
+                  "    pm.collectionVariables.set(key, attempts + 1);",
+                  "    console.log(`t5: ${body.status}, nuevo intento en 5 s (${attempts + 1})`);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "    setTimeout(() => {}, 5000);",
+                  "} else {",
+                  "    pm.collectionVariables.set(key, 0);",
+                  "    pm.test(`estado final esperado: ${wanted.join(\" o \")}`, () => pm.expect(wanted).to.include(body.status));",
+                  "    if (body.result) {",
+                  "        console.log(`t5: ${body.status} | tokens=${body.result.tokens_used} | ruta=${body.result.route.join(\" → \")} | trace_id=${body.trace_id}`);",
+                  "        console.log(body.result.final_answer);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rechazar (alternativa a Aprobar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{t5_job_id}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{t5_job_id}}",
+                "approve"
+              ]
+            },
+            "description": "Úsela en lugar de Aprobar para probar el rechazo. El Collection Runner la omite (ver la carpeta).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": false,\n  \"comment\": \"No publicar hasta validar con Dirección.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Rechazada",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/f60718293a4b5c6d7e8f90a1b2c3d4e5/approve",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "f60718293a4b5c6d7e8f90a1b2c3d4e5",
+                    "approve"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"approved\": false,\n  \"comment\": \"No publicar hasta validar con Dirección.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"job_id\": \"f60718293a4b5c6d7e8f90a1b2c3d4e5\",\n  \"conversation_id\": \"4d3c2b1a0f9e8d7c6b5a49382716f5e4\",\n  \"status\": \"PENDING\",\n  \"query\": \"Calcula la variación porcentual del eNPS 2025 respecto de 2024 y publica el informe para RR. HH.\",\n  \"publish\": true,\n  \"created_at\": \"2026-11-22T14:03:11.204+00:00\",\n  \"updated_at\": \"2026-11-22T14:03:11.392+00:00\",\n  \"approval\": {\n    \"approved\": false,\n    \"comment\": \"No publicar hasta validar con Dirección.\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// En el Collection Runner la decisión ya se tomó con \"Aprobar\": se acepta 409",
+                  "pm.test(\"202 o 409\", () => pm.expect([202, 409]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Errores y validación",
+      "description": "Casos de error documentados: 404, 409 y 422 (validación Pydantic).",
+      "item": [
+        {
+          "name": "404 Tarea inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/no-existe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "no-existe"
+              ]
+            },
+            "description": ""
+          },
+          "response": [
+            {
+              "name": "404",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/no-existe",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "no-existe"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"detail\": \"No existe la tarea no-existe.\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 Conversación inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/no-existe/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations",
+                "no-existe",
+                "messages"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"Hola, ¿qué documentos hay?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "404",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/conversations/no-existe/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "conversations",
+                    "no-existe",
+                    "messages"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"Hola, ¿qué documentos hay?\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"detail\": \"No existe la conversación no-existe.\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "422 Consulta vacía",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks"
+              ]
+            },
+            "description": "`query` debe tener entre 3 y 2000 caracteres útiles.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"  \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "422",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"  \"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"detail\": [\n    {\n      \"type\": \"string_too_short\",\n      \"loc\": [\n        \"body\",\n        \"query\"\n      ],\n      \"msg\": \"String should have at least 3 characters\",\n      \"input\": \"  \",\n      \"ctx\": {\n        \"min_length\": 3\n      }\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "422 Aprobación sin campo approved",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/cualquier-id/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "cualquier-id",
+                "approve"
+              ]
+            },
+            "description": "Pydantic valida el cuerpo antes de buscar la tarea.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"falta approved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "422",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/<job_id>/approve",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "<job_id>",
+                    "approve"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"comment\": \"falta approved\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"detail\": [\n    {\n      \"type\": \"missing\",\n      \"loc\": [\n        \"body\",\n        \"approved\"\n      ],\n      \"msg\": \"Field required\",\n      \"input\": {\n        \"comment\": \"falta approved\"\n      }\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 Conversación ocupada: crear",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations"
+              ]
+            },
+            "description": "Crea una conversación para el caso siguiente."
+          },
+          "response": [
+            {
+              "name": "201",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/conversations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "conversations"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"conversation_id\": \"5e4d3c2b1a0f9e8d7c6b5a49382716f5\",\n  \"messages_url\": \"/conversations/5e4d3c2b1a0f9e8d7c6b5a49382716f5/messages\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"busy_conversation_id\", pm.response.json().conversation_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 Conversación ocupada: primer mensaje",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{busy_conversation_id}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations",
+                "{{busy_conversation_id}}",
+                "messages"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"¿Cuántos días de vacaciones hay con 7 años de antigüedad?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"202\", () => pm.response.to.have.status(202));",
+                  "pm.collectionVariables.set(\"busy_job_id\", pm.response.json().job_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 Conversación ocupada: segundo mensaje inmediato",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{busy_conversation_id}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "conversations",
+                "{{busy_conversation_id}}",
+                "messages"
+              ]
+            },
+            "description": "Envíelo enseguida del anterior: una conversación procesa un turno a la vez.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"¿Y con 12 años?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "409",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/conversations/5e4d3c2b1a0f9e8d7c6b5a49382716f5/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "conversations",
+                    "5e4d3c2b1a0f9e8d7c6b5a49382716f5",
+                    "messages"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"¿Y con 12 años?\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"detail\": \"La conversación 5e4d3c2b1a0f9e8d7c6b5a49382716f5 tiene un turno en curso (6071829a3b4c5d6e7f8091a2b3c4d5e6).\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 Aprobar una tarea que no espera aprobación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{busy_job_id}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{busy_job_id}}",
+                "approve"
+              ]
+            },
+            "description": "Usa el job del primer mensaje de la conversación ocupada, que está PENDING o RUNNING.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "409",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/tasks/<job_id>/approve",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "<job_id>",
+                    "approve"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"approved\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"detail\": \"La tarea 6071829a3b4c5d6e7f8091a2b3c4d5e6 no espera aprobación (estado actual: PENDING).\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "t1_job_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t1_conversation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t1_trace_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t2_job_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t2_conversation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t2_trace_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t3_job_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t3_conversation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t3_trace_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t4a_job_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t4a_conversation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t4a_trace_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t4b_job_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t4b_conversation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t4b_trace_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t5_job_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t5_conversation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t5_trace_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "t4_conversation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "busy_conversation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "busy_job_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

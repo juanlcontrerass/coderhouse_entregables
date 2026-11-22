@@ -1,0 +1,80 @@
+# Levanta todo el sistema con un solo comando: Redis + Phoenix + API + worker.
+#   docker compose up -d --build        (o ./run.sh, que además valida el .env)
+# Solo la infraestructura (para correr API y worker en el .venv local):
+#   docker compose up -d redis phoenix
+
+name: intelligence-system
+
+x-app: &app
+  build: .
+  image: intelligence-system:1.0.0
+  env_file:
+    - path: .env
+      required: true
+  environment:
+    REDIS_URL: redis://redis:6379/0
+    PHOENIX_COLLECTOR_ENDPOINT: http://phoenix:6006/v1/traces
+    VECTORSTORE_DIR: /srv/vectorstore
+    REPORTS_DIR: /srv/reports
+  depends_on:
+    redis:
+      condition: service_healthy
+    phoenix:
+      condition: service_started
+  restart: unless-stopped
+
+services:
+  redis:
+    # Redis 8 incluye RedisJSON y RediSearch, que necesita el checkpointer de LangGraph
+    image: redis:8.2
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    # AOF: los jobs, la cola y los checkpoints sobreviven a un reinicio del contenedor
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  phoenix:
+    image: arizephoenix/phoenix:version-21.1.0
+    ports:
+      - "6006:6006"  # UI y colector OTLP por HTTP
+      - "4317:4317"  # colector OTLP por gRPC
+    environment:
+      PHOENIX_WORKING_DIR: /mnt/data
+      # Dashboard local de desarrollo: sin login para recibir trazas sin API key.
+      # En un entorno compartido, quite esta línea y defina PHOENIX_API_KEY en el .env.
+      PHOENIX_ENABLE_AUTH: "false"
+      PHOENIX_TELEMETRY_ENABLED: "false"
+    volumes:
+      - phoenix-data:/mnt/data
+
+  api:
+    <<: *app
+    command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  worker:
+    <<: *app
+    command: ["arq", "app.worker.worker.WorkerSettings"]
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+      - vectorstore:/srv/vectorstore
+      - ./reports:/srv/reports
+
+volumes:
+  redis-data:
+  phoenix-data:
+  hf-cache:
+  vectorstore:

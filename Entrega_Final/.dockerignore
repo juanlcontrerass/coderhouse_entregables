@@ -1,0 +1,10 @@
+.venv/
+.env
+.git/
+__pycache__/
+.pytest_cache/
+vectorstore/
+reports/
+screenshots/
+tests/
+docs/
